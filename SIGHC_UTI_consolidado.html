@@ -883,27 +883,6 @@
 
     const LAB_RANGES = { gb: [4000, 11000], hb: [12, 18], hto: [35, 50], plat: [150000, 450000], gluc: [70, 140], urea: [15, 50], creat: [0.6, 1.2], sodio: [135, 145], potasio: [3.5, 5.2], cloro: [98, 106], calcio: [8.5, 10.5], magnesio: [1.7, 2.2], albumina: [3.5, 5.0], prottot: [6.0, 8.3], biltot: [0.1, 1.2], tgo: [5, 40], tgp: [5, 40], fal: [40, 129], ph: [7.35, 7.45], pco2: [35, 45], hco3: [22, 26], lactico: [0.5, 2.0] };
 
-    // window.onload = async function() {
-    //     mCama = new bootstrap.Modal(document.getElementById('modalCama'));
-    //     renderizarEstructurasCheckboxes(); poblarListadosDesplegablesDiagnosticos();
-    //     let tituloOriginal = document.querySelector('.navbar-brand').innerHTML;
-    //     // Solo intentamos descargar de la nube si la URL está configurada de verdad.
-    //     let urlConfigurada = (typeof SIGHC_BACKEND_URL !== 'undefined') && SIGHC_BACKEND_URL && SIGHC_BACKEND_URL.indexOf('PEGAR_AQUI') < 0 && SIGHC_BACKEND_URL.indexOf('http') === 0;
-    //     if (urlConfigurada) {
-    //         document.querySelector('.navbar-brand').innerHTML = '<i class="bi bi-cloud-arrow-down-fill"></i> Sincronizando...';
-    //         try {
-    //             let response = await fetch(GOOGLE_APP_SCRIPT_URL);
-    //             let cloudData = await response.json();
-    //             // Solo sobrescribir si llegan datos NO vacíos (evita borrar el mapa de camas).
-    //             if (cloudData && Array.isArray(cloudData.camas) && cloudData.camas.length) camasEstado = cloudData.camas;
-    //             if (cloudData && cloudData.pacientes && typeof cloudData.pacientes === 'object') dbPacientes = cloudData.pacientes;
-    //         } catch (e) { console.error("Error cargando desde la nube:", e); }
-    //         document.querySelector('.navbar-brand').innerHTML = tituloOriginal;
-    //     }
-    //     mostrarView('dashboard');
-    //     document.getElementById('view-paciente').addEventListener('input', () => hasUnsavedChanges = true);
-    //     document.getElementById('view-paciente').addEventListener('change', () => hasUnsavedChanges = true);
-    // };
     window.onload = async function() {
         mCama = new bootstrap.Modal(document.getElementById('modalCama'));
         renderizarEstructurasCheckboxes(); poblarListadosDesplegablesDiagnosticos();
@@ -915,28 +894,9 @@
             try {
                 let response = await fetch(GOOGLE_APP_SCRIPT_URL);
                 let cloudData = await response.json();
-                
                 // Solo sobrescribir si llegan datos NO vacíos (evita borrar el mapa de camas).
                 if (cloudData && Array.isArray(cloudData.camas) && cloudData.camas.length) camasEstado = cloudData.camas;
-                
-                // --- NUEVA LÓGICA DE FUSIÓN (HISTÓRICOS + ACTIVOS) ---
-                if (cloudData && cloudData.pacientes && typeof cloudData.pacientes === 'object') {
-                    dbPacientes = {}; // Limpiamos la RAM local para evitar basura
-
-                    // 1. Cargamos primero el gran volumen de históricos
-                    if (cloudData.historicos_internos) {
-                        for (let hc in cloudData.historicos_internos) {
-                            dbPacientes[hc] = cloudData.historicos_internos[hc];
-                        }
-                    }
-                    
-                    // 2. Cargamos los pacientes activos en cama (sobreescriben si hay cruce)
-                    for (let hc in cloudData.pacientes) {
-                        dbPacientes[hc] = cloudData.pacientes[hc];
-                    }
-                }
-                // -------------------------------------------------------
-
+                if (cloudData && cloudData.pacientes && typeof cloudData.pacientes === 'object') dbPacientes = cloudData.pacientes;
             } catch (e) { console.error("Error cargando desde la nube:", e); }
             document.querySelector('.navbar-brand').innerHTML = tituloOriginal;
         }
@@ -3252,41 +3212,12 @@ function calcSOFAIngreso() {
     // --------------------------------------------------------
     const NUEVO_APP_SCRIPT_URL = SIGHC_BACKEND_URL;
 
-    // window.sincronizacionManual = function() {
-    //     let tOrig = document.querySelector('.navbar-brand').innerHTML; 
-    //     document.querySelector('.navbar-brand').innerHTML = '<i class="bi bi-arrow-repeat"></i> Sincronizando...';
-    //     fetch(NUEVO_APP_SCRIPT_URL).then(r => r.json()).then(cloudData => {
-    //         if (cloudData && Array.isArray(cloudData.camas) && cloudData.camas.length) camasEstado = cloudData.camas; 
-    //         if (cloudData && cloudData.pacientes) dbPacientes = cloudData.pacientes;
-    //         sincronizarMemoria(); 
-    //         document.querySelector('.navbar-brand').innerHTML = tOrig; 
-    //         mostrarView('dashboard'); 
-    //         alert("✅ Sincronización exitosa.");
-    //     }).catch(e => { 
-    //         document.querySelector('.navbar-brand').innerHTML = tOrig; 
-    //         alert("⚠️ Error al sincronizar."); 
-    //     });
-    // };
     window.sincronizacionManual = function() {
         let tOrig = document.querySelector('.navbar-brand').innerHTML; 
         document.querySelector('.navbar-brand').innerHTML = '<i class="bi bi-arrow-repeat"></i> Sincronizando...';
         fetch(NUEVO_APP_SCRIPT_URL).then(r => r.json()).then(cloudData => {
             if (cloudData && Array.isArray(cloudData.camas) && cloudData.camas.length) camasEstado = cloudData.camas; 
-            
-            // --- NUEVA LÓGICA DE FUSIÓN (IGUAL AL ONLOAD) ---
-            if (cloudData && cloudData.pacientes && typeof cloudData.pacientes === 'object') {
-                dbPacientes = {}; 
-                if (cloudData.historicos_internos) {
-                    for (let hc in cloudData.historicos_internos) {
-                        dbPacientes[hc] = cloudData.historicos_internos[hc];
-                    }
-                }
-                for (let hc in cloudData.pacientes) {
-                    dbPacientes[hc] = cloudData.pacientes[hc];
-                }
-            }
-            // ------------------------------------------------
-            
+            if (cloudData && cloudData.pacientes) dbPacientes = cloudData.pacientes;
             sincronizarMemoria(); 
             document.querySelector('.navbar-brand').innerHTML = tOrig; 
             mostrarView('dashboard'); 
@@ -3297,30 +3228,12 @@ function calcSOFAIngreso() {
         });
     };
 
-    // window.sincronizarMemoria = function() { 
-    //     localStorage.setItem('sighc_camas_final_v23', JSON.stringify(camasEstado)); 
-    //     localStorage.setItem('sighc_pacientes_final_v23', JSON.stringify(dbPacientes)); 
-    //     fetch(NUEVO_APP_SCRIPT_URL, { 
-    //         method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, 
-    //         body: JSON.stringify({ action: "sync_state", camas: camasEstado, pacientes: dbPacientes }) 
-    //     }).catch(e => console.error("Error", e));
-    // };
-    
-    // NUEVA FUNCION PARA LEER HISTORICO/ACTUAL 
     window.sincronizarMemoria = function() { 
         localStorage.setItem('sighc_camas_final_v23', JSON.stringify(camasEstado)); 
         localStorage.setItem('sighc_pacientes_final_v23', JSON.stringify(dbPacientes)); 
-        
-        let pacientesActivos = {};
-        for (let hc in dbPacientes) {
-            if (dbPacientes[hc].activo === true) {
-                pacientesActivos[hc] = dbPacientes[hc];
-            }
-        }
-
         fetch(NUEVO_APP_SCRIPT_URL, { 
             method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, 
-            body: JSON.stringify({ action: "sync_state", camas: camasEstado, pacientes: pacientesActivos }) 
+            body: JSON.stringify({ action: "sync_state", camas: camasEstado, pacientes: dbPacientes }) 
         }).catch(e => console.error("Error", e));
     };
 
